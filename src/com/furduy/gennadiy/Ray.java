@@ -23,7 +23,7 @@ public class Ray {
     }
 
     public Vector3 eval(double t) {
-        return Vector3.add(this.origin, Vector3.mul(this.direction,  t));
+        return this.origin.add(this.direction.mul(t));
     }
 
     @Override

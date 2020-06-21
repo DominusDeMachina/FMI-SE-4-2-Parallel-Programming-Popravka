@@ -11,10 +11,12 @@ class SmallPT {
                     Sphere.ReflectionType.DIFFUSE), // Left
             new Sphere(1e5, new Vector3(-1e5 + 99, 40.8, 81.6), new Vector3(), new Vector3(0.25, 0.25, 0.75),
                     Sphere.ReflectionType.DIFFUSE), // Right
-            new Sphere(1e5, new Vector3(50, 40.8, 1e5), new Vector3(), new Vector3(0.75), Sphere.ReflectionType.DIFFUSE), // Back
+            new Sphere(1e5, new Vector3(50, 40.8, 1e5), new Vector3(), new Vector3(0.75),
+                    Sphere.ReflectionType.DIFFUSE), // Back
             new Sphere(1e5, new Vector3(50, 40.8, -1e5 + 170), new Vector3(), new Vector3(),
                     Sphere.ReflectionType.DIFFUSE), // Front
-            new Sphere(1e5, new Vector3(50, 1e5, 81.6), new Vector3(), new Vector3(0.75), Sphere.ReflectionType.DIFFUSE), // Bottom
+            new Sphere(1e5, new Vector3(50, 1e5, 81.6), new Vector3(), new Vector3(0.75),
+                    Sphere.ReflectionType.DIFFUSE), // Bottom
             new Sphere(1e5, new Vector3(50, -1e5 + 81.6, 81.6), new Vector3(), new Vector3(0.75),
                     Sphere.ReflectionType.DIFFUSE), // Top
             new Sphere(16.5, new Vector3(27, 16.5, 47), new Vector3(), new Vector3(0.999),
@@ -48,17 +50,17 @@ class SmallPT {
 
             Sphere shape = spheres[isect.id];
             Vector3 p = r.eval(r.tmax);
-            Vector3 n = Vector3.sub(p, shape.center).normalize();
+            Vector3 n = p.sub(shape.center).normalize();
 
-            L = Vector3.add(L, Vector3.mul(F, shape.emission));
-            F = Vector3.mul(F, shape.color);
+            L = L.add(F.mul(shape.emission));
+            F = F.mul(shape.color);
 
             // Russian roulette
             if (r.depth > 4) {
                 final double continue_probability = shape.color.max();
                 if (rng.uniformFloat() >= continue_probability)
                     return L;
-                F = Vector3.div(F, continue_probability);
+                F = F.div(continue_probability);
             }
 
             // Next path segment
@@ -70,22 +72,21 @@ class SmallPT {
                 }
                 case REFRACTIVE: {
                     Probability probability = new Probability();
-                    Vector3 d = Specular.idealSpecularTransmit(r.direction, n, REFRACTIVE_INDEX_OUT, REFRACTIVE_INDEX_IN,
-                            probability, rng);
-                    F = Vector3.mul(F, probability.pr);
+                    Vector3 d = Specular.idealSpecularTransmit(r.direction, n, REFRACTIVE_INDEX_OUT,
+                            REFRACTIVE_INDEX_IN, probability, rng);
+                    F = F.mul(probability.pr);
                     r = new Ray(p, d, Sphere.EPSILON_SPHERE, Double.POSITIVE_INFINITY, r.depth + 1);
                     break;
                 }
                 default: {
-                    Vector3 w = n.dot(r.direction) < 0 ? n : Vector3.minus(n);
+                    Vector3 w = n.dot(r.direction) < 0 ? n : n.minus();
                     Vector3 u = (Math.abs(w.x) > 0.1 ? new Vector3(0.0, 1.0, 0.0) : new Vector3(1.0, 0.0, 0.0)).cross(w)
                             .normalize();
                     Vector3 v = w.cross(u);
 
                     Vector3 sample_d = Sampling.cosineWeightedSampleOnHemisphere(rng.uniformFloat(),
                             rng.uniformFloat());
-                    Vector3 d = Vector3.add(Vector3.add(Vector3.mul(sample_d.x, u), Vector3.mul(sample_d.y, v)),
-                            Vector3.mul(sample_d.z, w)).normalize();
+                    Vector3 d = u.mul(sample_d.x).add(v.mul(sample_d.y)).add(w.mul(sample_d.z)).normalize();
                     r = new Ray(p, d, Sphere.EPSILON_SPHERE, Double.POSITIVE_INFINITY, r.depth + 1);
                     break;
                 }
@@ -106,7 +107,7 @@ class SmallPT {
         final double fov = 0.5135;
 
         Vector3 cx = new Vector3(w * fov / h, 0.0, 0.0);
-        Vector3 cy = Vector3.mul(cx.cross(camDirection).normalize(), fov);
+        Vector3 cy = cx.cross(camDirection).normalize().mul(fov);
 
         Vector3[] Ls = new Vector3[w * h];
         for (int i = 0; i < w * h; ++i)
@@ -129,12 +130,13 @@ class SmallPT {
                             final double u2 = 2.0 * rng.uniformFloat();
                             final double dx = u1 < 1 ? Math.sqrt(u1) - 1.0 : 1.0 - Math.sqrt(2.0 - u1);
                             final double dy = u2 < 1 ? Math.sqrt(u2) - 1.0 : 1.0 - Math.sqrt(2.0 - u2);
-                            Vector3 d = Vector3.add(Vector3.add(Vector3.mul(cx, (((sx + 0.5 + dx) / 2 + x) / w - 0.5)),
-                                    Vector3.mul(cy, (((sy + 0.5 + dy) / 2 + y) / h - 0.5))), camDirection);
-                            L = Vector3.add(L, Vector3.div(radiance(new Ray(Vector3.add(camPosition, Vector3.mul(d, 130)),
-                                    d.normalize(), Sphere.EPSILON_SPHERE), rng), nb_samples));
+                            Vector3 d = cx.mul((((sx + 0.5 + dx) / 2 + x) / w - 0.5))
+                                    .add(cy.mul((((sy + 0.5 + dy) / 2 + y) / h - 0.5))).add(camDirection);
+                            L = L.add(
+                                    radiance(new Ray(camPosition.add(d.mul(130)), d.normalize(), Sphere.EPSILON_SPHERE),
+                                            rng).div(nb_samples));
                         }
-                        Ls[i] = Vector3.add(Ls[i], Vector3.mul(0.25, Vector3.clamp(L, 0.0, 1.0)));
+                        Ls[i] = Ls[i].add(L.clamp(0.0, 1.0).mul(0.25));
                     }
                 }
             }

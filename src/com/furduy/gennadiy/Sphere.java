@@ -21,7 +21,7 @@ public class Sphere {
 
     public boolean intersect(Ray ray) {
 
-        final Vector3 op = Vector3.sub(center, ray.origin);
+        final Vector3 op = center.sub(ray.origin);
         final double dop = ray.direction.dot(op);
         final double D = dop * dop - op.dot(op) + radius * radius;
 
