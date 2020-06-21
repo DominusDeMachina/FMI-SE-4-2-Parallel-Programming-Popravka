@@ -1,9 +1,9 @@
 package com.furduy.gennadiy;
 
-public class RNG {
+public class RandomGenerator {
     protected java.util.Random rnd;
 
-    public RNG(int seed) {
+    public RandomGenerator(int seed) {
         seed(seed);
     }
 

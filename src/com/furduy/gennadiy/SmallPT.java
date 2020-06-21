@@ -5,6 +5,7 @@ class SmallPT {
     // Scene
     public static final double REFRACTIVE_INDEX_OUT = 1.0;
     public static final double REFRACTIVE_INDEX_IN = 1.5;
+    public static final double FIELD_OF_VIEW = 0.5135;
 
     public static Sphere[] spheres = {
             new Sphere(1e5, new Vector3(1e5 + 1, 40.8, 81.6), new Vector3(), new Vector3(0.75, 0.25, 0.25),
@@ -38,7 +39,7 @@ class SmallPT {
         return hit;
     }
 
-    public static Vector3 radiance(Ray ray, RNG rng) {
+    public static Vector3 radiance(Ray ray, RandomGenerator rng) {
         Ray r = ray;
         Vector3 L = new Vector3();
         Vector3 F = new Vector3(1);
@@ -94,24 +95,14 @@ class SmallPT {
         }
     }
 
-    public static void main(String[] args) {
-        RNG rng = new RNG(606418532);
-
-        Vector3 camPosition = new Vector3(50, 52, 295.6);
-        Vector3 camDirection = new Vector3(0, -0.042612, -1).normalize();
-
-        final int w = 1024;
-        final int h = 768;
-
-        final int nb_samples = (args.length > 0) ? Integer.parseInt(args[0]) / 4 : 1;
-        final double fov = 0.5135;
-
-        Vector3 cx = new Vector3(w * fov / h, 0.0, 0.0);
-        Vector3 cy = cx.cross(camDirection).normalize().mul(fov);
-
+    public static Vector3[] worker(int w, int h, Camera camera, int nb_samples, RandomGenerator rng) {
         Vector3[] Ls = new Vector3[w * h];
         for (int i = 0; i < w * h; ++i)
             Ls[i] = new Vector3();
+
+        Vector3 cx = new Vector3(w * FIELD_OF_VIEW / h, 0.0, 0.0);
+        Vector3 cy = cx.cross(camera.direction).normalize().mul(FIELD_OF_VIEW);
+
 
         for (int y = 0; y < h; ++y) {
             // pixel row
@@ -131,9 +122,9 @@ class SmallPT {
                             final double dx = u1 < 1 ? Math.sqrt(u1) - 1.0 : 1.0 - Math.sqrt(2.0 - u1);
                             final double dy = u2 < 1 ? Math.sqrt(u2) - 1.0 : 1.0 - Math.sqrt(2.0 - u2);
                             Vector3 d = cx.mul((((sx + 0.5 + dx) / 2 + x) / w - 0.5))
-                                    .add(cy.mul((((sy + 0.5 + dy) / 2 + y) / h - 0.5))).add(camDirection);
+                                    .add(cy.mul((((sy + 0.5 + dy) / 2 + y) / h - 0.5))).add(camera.direction);
                             L = L.add(
-                                    radiance(new Ray(camPosition.add(d.mul(130)), d.normalize(), Sphere.EPSILON_SPHERE),
+                                    radiance(new Ray(camera.position.add(d.mul(130)), d.normalize(), Sphere.EPSILON_SPHERE),
                                             rng).div(nb_samples));
                         }
                         Ls[i] = Ls[i].add(L.clamp(0.0, 1.0).mul(0.25));
@@ -141,6 +132,20 @@ class SmallPT {
                 }
             }
         }
+        return Ls;
+    }
+
+    public static void main(String[] args) {
+        RandomGenerator rng = new RandomGenerator(42);
+
+        Camera camera = new Camera(new Vector3(50, 52, 295.6), new Vector3(0, -0.042612, -1).normalize());
+
+        final int nb_samples = (args.length > 0) ? Integer.parseInt(args[0]) / 4 : 1;
+
+        final int w = 1024;
+        final int h = 768;
+
+        Vector3[] Ls = worker(w, h, camera, nb_samples, rng);
 
         ImageIO.writePPM(w, h, Ls, "java-image.ppm");
     }

@@ -16,7 +16,7 @@ public class Specular {
         return d.sub(n.mul(2.0 * n.dot(d)));
     }
 
-    public static Vector3 idealSpecularTransmit(Vector3 d, Vector3 n, double n_out, double n_in, Probability probability, RNG rng) {
+    public static Vector3 idealSpecularTransmit(Vector3 d, Vector3 n, double n_out, double n_in, Probability probability, RandomGenerator rng) {
         Vector3 d_Re = idealSpecularReflect(d, n);
 
         final boolean out_to_in = n.dot(d) < 0;
